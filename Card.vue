@@ -25,26 +25,7 @@
           <v-switch :label="`Only show the same`" v-on:change="filterDifferent"></v-switch>
         </v-flex>
       </v-layout>
-      <v-layout>
-        <v-flex xs2>
-          <v-btn v-on:click="destroy(1)">
-            <v-icon dark left color="red">remove_circle</v-icon>Remove left
-          </v-btn>
-        </v-flex>
-        <v-flex xs2>
-          <v-btn v-on:click="destroy(2)">
-            <v-icon dark left color="red">remove_circle</v-icon>Remove right
-          </v-btn>
-        </v-flex>
-        <!-- <v-flex xs2>
-          <v-btn v-on:click="destroy(2)">
-    <v-switch
-      v-model="switch1"
-      :label="`Switch 1: ${switch1.toString()}`"
-    ></v-switch>
-          </v-btn>
-        </v-flex>-->
-      </v-layout>
+
       <!-- Caption -->
       <v-layout row wrap>
         <v-flex xs4 class="text-xs-left">
@@ -58,62 +39,50 @@
         </v-flex>
       </v-layout>
       <div ref="legend"></div>
-
       <v-layout row wrap>
-        <v-flex xs10>
+        <v-flex xs12>
           <draggable :list="list">
-            <v-list v-for="(value, index) in filteredData" :key="value[0]">
+            <v-list v-for="value in filteredData" :key="value[0]">
               <v-layout row justify-space-between>
                 <v-flex grow xs1>
-                  <DiffComparator v-bind:itemsDiff="value[3]" v-bind:gradient="gradient"></DiffComparator>
+                  <p id="index">{{ value[0] }}:</p>
+
+                  <!-- <span v-for="(e,i) in value.slice(1,cardNum - 1)" :key="i"> -->
+                  <!-- <DiffComparator v-bind:itemsDiff="value[cardNum + 1]" v-bind:gradient="gradient"></DiffComparator> -->
+                  <!-- </span> -->
+
+                  <DiffComparator v-bind:itemsDiff="value[cardNum + 1]" v-bind:gradient="gradient"></DiffComparator>
+                  <!-- <v-flex grow xs2> -->
+                  <!-- </v-flex> -->
                 </v-flex>
 
-                <v-flex grow xs2>
-                  <span id="index">{{ value[0] }}:</span>
+                <v-flex grow xs7 v-if="isUrl(value[1])">
+                  <urlComparator v-bind:values="value.slice(1, cardNum + 1)" />
+                </v-flex>
+                <v-flex grow xs7 v-else-if="isLongtext(value[1], value[0])">
+                  <longTextComparator v-bind:values="value.slice(1, cardNum + 1)" />
+                </v-flex>
+                <v-flex grow xs7 v-else-if="isImage(value[1], value[0])">
+                  <imageComparator v-bind:values="value.slice(1, cardNum + 1)" />
+                </v-flex>
+                <v-flex grow xs7 v-else-if="isArray(value[1], value[0])">
+                  <listComparator v-bind:values="value.slice(1, cardNum + 1)" />
                 </v-flex>
 
-                <v-flex grow xs8 v-if="isUrl(value[1])">
-                  <urlComparator v-bind:v1="value[1]" v-bind:v2="value[2]" />
-                </v-flex>
-                <v-flex grow xs8 v-else-if="value[2]&&isLongtext(value[1])">
-                  <longTextComparator v-bind:v1="value[1]" v-bind:v2="value[2]" />
-                </v-flex>
-                <v-flex grow xs8 v-else-if="value[2]&&isImage(value[1])">
-                  <imageComparator v-bind:v1="value[1]" v-bind:v2="value[2]" />
-                </v-flex>
-                <v-flex grow xs8 v-else>
-                  <normalComparator v-bind:v1="value[1]" v-bind:v2="value[2]" />
+                <v-flex grow xs7 v-else>
+                  <normalComparator v-bind:values="value.slice(1, cardNum + 1)" />
                 </v-flex>
 
-                <v-flex grow xs2>
-                  <div :ref="'distribution' + index"></div>
-
-                  <numerialDistribution
-                    v-if="isNumeralDistribution(index)"
-                    :ref="'distribution' + index"
-                    v-bind:dis="dis[index]"
-                    v-bind:index="index"
-                    v-bind:v1="value[1]"
-                    v-bind:v2="value[2]"
-                  />
-                  <ordinalDistribution
-                    v-else
-                    v-bind:dis="dis[index]"
-                    :ref="'distribution' + index"
-                    v-bind:v1="value[1]"
-                    v-bind:v2="value[2]"
+                <v-flex grow xs4>
+                  <Distribution
+                    v-bind:values="value.slice(1, cardNum + 1)"
+                    v-bind:descriptor="getDescriptor(value[0])"
                   />
                 </v-flex>
               </v-layout>
             </v-list>
           </draggable>
         </v-flex>
-
-        <!-- <v-flex xs2>
-          <v-layout row wrap>
-            <p>Place Holder for distribution</p>
-          </v-layout>
-        </v-flex>-->
       </v-layout>
     </v-card-text>
   </v-card>
@@ -121,6 +90,7 @@
 
 <script>
 import * as d3 from "d3";
+// import numeral from "numeral";
 
 import DiffComparator from "./ColorEncodingComparator/Comparator";
 import draggable from "vuedraggable";
@@ -131,8 +101,7 @@ import imageComparator from "./Card_cell_comparator/imageComparator";
 import longTextComparator from "./Card_cell_comparator/longTextComparator";
 import listComparator from "./Card_cell_comparator/listComparator";
 import normalComparator from "./Card_cell_comparator/normalComparator";
-import numerialDistribution from "./Card_cell_comparator/numerialDistribution";
-import ordinalDistribution from "./Card_cell_comparator/ordinalDistribution";
+import Distribution from "./Card_cell_comparator/Distribution";
 
 /*
   [WARNING] This card element would not show until two rows are selected
@@ -155,10 +124,9 @@ export default {
     longTextComparator,
     listComparator,
     normalComparator,
-    numerialDistribution,
-    ordinalDistribution
+    Distribution
   },
-  props: ["columnTypes", "leftItem", "rightItem", "distribution"],
+  props: ["numCard", "columnTypes", "items", "descriptor"],
 
   data() {
     return {
@@ -182,7 +150,8 @@ export default {
       list: null, // the list that is shown, initialized from "joinedArray" props
       upSort: false,
       joinedArray: null,
-      dis: []
+      dis: [],
+      cardNum: 0
     };
   },
   computed: {
@@ -191,15 +160,20 @@ export default {
       const regex = new RegExp(this.search, "i");
 
       return this.list.filter(
-        item =>
-          regex.test(item[0]) || regex.test(item[1]) || regex.test(item[2])
+        item => {
+          return item.some((e, i) => {
+            if (i < this.cardNum + 1) return regex.test(e);
+            else return false;
+          });
+        }
+        // regex.test(item[0]) || regex.test(item[1]) || regex.test(item[2])
       );
     },
     isFilled() {
-      return this.leftItem.length > 0 && this.rightItem.length > 0;
+      return this.items.length >= this.cardNum;
     },
     isCleared() {
-      return this.leftItem.length === 0 && this.rightItem.length === 0;
+      return this.items.length === 0;
     },
 
     dataType() {
@@ -242,17 +216,9 @@ export default {
 
     filterDifferent(flag) {
       if (flag) {
-        this.list = this.list.filter(e => e[3] > 0);
+        this.list = this.list.filter(e => e[this.cardNum + 1] > 0);
       } else {
         this.list = this.joinedArray.slice();
-      }
-    },
-
-    isNumeralDistribution(index) {
-      if (this.columnTypes[index] == "Number") {
-        return true;
-      } else {
-        return false;
       }
     },
 
@@ -265,7 +231,6 @@ export default {
 
       if (this.sortBy === "default") {
         this.list = this.joinedArray.slice();
-        // this.
         return;
       }
       this.list.sort((a, b) => this.sortFunction(a, b, option, comparison));
@@ -292,47 +257,79 @@ export default {
           result = comparison.compare(option, a[1], b[1]) - 0.5;
           break;
         case "similarity":
-          result = a[3] - b[3];
+          result = a[this.cardNum + 1] - b[this.cardNum + 1];
           break;
       }
       return this.upSort ? result : -result;
     },
     generateUnsortedList() {
       const comparator = new loadedComparators();
-      let values = this.leftItem.map(
+
+      let values = this.items[0].map(
         (e, i) => {
-          for (let [key, value] of Object.entries(this.columnTypes)) {
-            if (key == e[0])
-              return comparator.compare(value, e[1], this.rightItem[i][1]);
+          if (this.descriptor[i] && this.descriptor[i].comparator) {
+            // The user provides a comparator
+            return this.descriptor[i].comparator(e[1], this.items[1][i][1]);
+          } else {
+            // Try to find the default factory function
+            for (let [key, value] of Object.entries(this.columnTypes)) {
+              if (key == e[0])
+                return comparator.compare(value, e[1], this.items[1][i][1]);
+            }
+            // Could not find the default factory function, naive check if same
+            return e[1] == this.items[1][i][1] ? 1 : 0;
           }
-          return e[1] == this.rightItem[i][1] ? 1 : 0;
         } // Index 0 is the key, index 1 is the value for each item
       );
 
-      let joinedArray = new Array(this.leftItem.length);
+      let joinedArray = new Array(this.items[0].length);
       for (let i = 0; i < joinedArray.length; i++) {
-        joinedArray[i] = new Array(4);
-        joinedArray[i][0] = this.leftItem[i][0];
-        joinedArray[i][1] = this.leftItem[i][1];
-        joinedArray[i][2] = this.rightItem[i][1];
-        joinedArray[i][3] = values[i];
+        joinedArray[i] = new Array(2 * this.cardNum);
+        // Get the key for the joined array
+        joinedArray[i][0] = this.items[0][i][0];
+
+        for (let j = 0; j < this.cardNum; j++) {
+          // get the value
+          joinedArray[i][j + 1] = this.items[j][i][1];
+          // joinedArray[i][2] = this.items[1][i][1];
+          // joinedArray[i][3] = this.items[2][i][1];
+        }
+
+        joinedArray[i][this.cardNum + 1] = values[i];
       }
+
       this.joinedArray = joinedArray;
-      this.list = joinedArray;
+      this.list = joinedArray.slice();
+
       // Generate the difference value for each field
-      this.list = this.list.map((e, i) => {
-        e[3] = comparator.compare(this.types[i], e[1], e[2]);
-        return e;
-      });
+      // this.list = this.list.map((e, i) => {
+      //   e[3] = comparator.compare(this.types[i], e[1], e[2]);
+      //   //Create values in the end for each field
+      //   return e;
+      // });
     },
-    isImage(url) {
+    isImage(url, value) {
+      if (this.descriptor) {
+        let descriptor = this.descriptor.filter(e => e.name === value)[0];
+        if (descriptor) {
+          return descriptor.type === "Image";
+        } else {
+          return false;
+        }
+      }
+
       if (!url || typeof url != "string") return false;
       return url.match(/\.(jpeg|jpg|gif|png)$/) != null;
     },
-    isObject(value) {
-      return value && typeof value === "object" && value.constructor === Object;
-    },
-    isLongtext(str) {
+    isLongtext(str, value) {
+      if (this.descriptor) {
+        let descriptor = this.descriptor.filter(e => e.name === value)[0];
+        if (descriptor) {
+          return descriptor.type === "Longtext";
+        } else {
+          return false;
+        }
+      }
       if (!str) return false;
       return str.length > 100;
     },
@@ -348,15 +345,21 @@ export default {
       );
       return !!pattern.test(str);
     },
-    isArray(v) {
+    isArray(v, value) {
+      if (this.descriptor) {
+        let descriptor = this.descriptor.filter(e => e.name === value)[0];
+        if (descriptor) {
+          return descriptor.type === "List";
+        } else {
+          return false;
+        }
+      }
       return Array.isArray(v);
     },
-
-    destroy(id) {
-      this.list = this.list.map(e => {
-        e[id] = null;
-        return e;
-      });
+    getDescriptor(value) {
+      if (this.descriptor) {
+        return this.descriptor.filter(e => e.name === value)[0];
+      }
     }
   },
   mounted() {
@@ -365,8 +368,8 @@ export default {
   watch: {
     distribution() {
       // this.dis = this.distribution.map((e, i) => {
-      //   if (this.columnTypes[i] == "Number") {
-      //     return numeral(e)._value; // parse the number
+      //   if (numeral(e)._value !== null) {
+      //     return numeral(e)._value; // parse the number using library
       //   } else {
       //     return e;
       //   }
@@ -379,31 +382,22 @@ export default {
         else return "categorical";
       });
     },
-    leftItem: {
+
+    items: {
       handler() {
         if (this.isCleared) {
           this.list = [];
           return;
         }
+
+        this.cardNum = this.numCard;
+
         if (this.isFilled) {
           this.generateUnsortedList();
           this.sortBy = "default";
         }
-      },
-      immediate: true // To invoke the comparator function the first time instantiating it
-    },
-    rightItem: {
-      handler() {
-        if (this.isCleared) {
-          this.list = [];
-          return;
-        }
-        if (this.isFilled) {
-          this.generateUnsortedList();
-          this.sortBy = "default";
-        }
-      },
-      immediate: true
+      }
+      // immediate: true // To invoke
     }
   }
 };

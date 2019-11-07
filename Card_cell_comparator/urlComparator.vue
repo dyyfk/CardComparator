@@ -1,10 +1,8 @@
 <template>
-  <v-layout row wrap>
-    <v-flex xs3 grow>
-      <a :href="{v1}">{{v1}}</a>
-    </v-flex>
-    <v-flex xs3 offset-xs2>
-      <a :href="{v2}">{{v2}}</a>
+  <v-layout align-center justify-space-between row>
+    <v-flex v-for="(v,i) in values" :key="i">
+      <a :href="{v}">{{v}}</a>
+      <br />
     </v-flex>
   </v-layout>
 </template>
@@ -12,9 +10,12 @@
 <script>
 export default {
   name: "urlComparator",
-  props: ["v1", "v2"]
+  props: ["values"]
 };
 </script>
 
 <style>
+a {
+  word-break: break-word;
+}
 </style>
